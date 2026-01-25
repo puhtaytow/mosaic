@@ -1,8 +1,7 @@
 use crate::{
-    ID,
+    ID, ROOT_PDA,
     errors::MosaicError,
     instructions::root_pda_check,
-    seeds::ROOT_PDA,
     state::{PackUnpack, root::Root},
 };
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -27,6 +26,7 @@ impl<'info> TryFrom<&'info [AccountView]> for InitializeRootIxAccounts<'info> {
     type Error = ProgramError;
 
     fn try_from(accounts: &'info [AccountView]) -> Result<Self, Self::Error> {
+        // perform accounts attribute check
         let [payer, root, _system] = accounts else {
             return Err(ProgramError::NotEnoughAccountKeys);
         };
@@ -84,9 +84,7 @@ impl<'info> TryFrom<(&'info [AccountView], &'info [u8])> for InitializeOperators
 
 impl<'info> InitializeOperators<'info> {
     pub fn handler(&mut self) -> ProgramResult {
-        root_pda_check(&self.accounts.root.address(), &[self.instruction_data.bump])?;
-
-        Self::mandatory_checks(&self.instruction_data)?;
+        Self::mandatory_checks(&self.instruction_data, &self.accounts)?;
 
         let root_ix_data_bump = [self.instruction_data.bump];
         let root_seeds = [Seed::from(ROOT_PDA), Seed::from(&root_ix_data_bump)];
@@ -112,7 +110,12 @@ impl<'info> InitializeOperators<'info> {
     }
 
     #[must_use]
-    fn mandatory_checks(ix_data: &InitializeRootIxData) -> Result<(), ProgramError> {
+    fn mandatory_checks(
+        ix_data: &InitializeRootIxData,
+        accounts: &InitializeRootIxAccounts,
+    ) -> Result<(), ProgramError> {
+        root_pda_check(&accounts.root.address(), &[ix_data.bump])?;
+
         if ix_data.operators.is_empty() {
             return Err(MosaicError::OperatorsCountMustBePositive.into());
         }

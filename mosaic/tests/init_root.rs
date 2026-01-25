@@ -7,8 +7,8 @@ use {
 };
 
 use mosaic::{
+    ROOT_PDA,
     instructions::{Instruction as ProgramIx, init_root::InitializeRootIxData},
-    seeds::ROOT_PDA,
     state::root::Root,
 };
 

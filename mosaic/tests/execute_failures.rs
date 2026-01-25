@@ -7,9 +7,9 @@ use {
 };
 
 use mosaic::{
+    SIGNING_SESSION_PDA,
     errors::MosaicError,
     instructions::{Instruction as ProgramIx, execute::ExecuteIxData},
-    seeds::SIGNING_SESSION_PDA,
     state::signing_session::{SigningSession, SigningSessionPhase},
 };
 

@@ -27,6 +27,7 @@ impl<'info> TryFrom<&'info [AccountView]> for SignIxAccounts<'info> {
     type Error = ProgramError;
 
     fn try_from(accounts: &'info [AccountView]) -> Result<Self, Self::Error> {
+        // perform accounts attribute check
         let [payer, root, signing_session, _system_program] = accounts else {
             return Err(ProgramError::NotEnoughAccountKeys);
         };

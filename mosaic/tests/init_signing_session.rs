@@ -3,14 +3,14 @@ mod common;
 use {
     borsh::to_vec,
     common::*,
-    mollusk_svm::{result::Check, Mollusk},
+    mollusk_svm::{Mollusk, result::Check},
 };
 
 use mosaic::{
+    SIGNING_SESSION_PDA,
     instructions::{
-        init_signing_session::InitializeSigningSessionIxData, Instruction as ProgramIx,
+        Instruction as ProgramIx, init_signing_session::InitializeSigningSessionIxData,
     },
-    seeds::SIGNING_SESSION_PDA,
     state::{
         root::Root,
         signing_session::{SigningSession, SigningSessionPhase},

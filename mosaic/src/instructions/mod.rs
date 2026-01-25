@@ -1,8 +1,7 @@
 use pinocchio::{Address, error::ProgramError};
 
 use crate::{
-    ID,
-    seeds::{ROOT_PDA, SIGNING_SESSION_PDA},
+    ID, {ROOT_PDA, SIGNING_SESSION_PDA},
 };
 
 pub mod execute;

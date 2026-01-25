@@ -7,9 +7,9 @@ use {
 };
 
 use mosaic::{
+    ROOT_PDA,
     errors::MosaicError,
     instructions::{Instruction as ProgramIx, init_root::InitializeRootIxData},
-    seeds::ROOT_PDA,
 };
 
 use solana_sdk::{

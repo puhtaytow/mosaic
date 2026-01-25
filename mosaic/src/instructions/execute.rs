@@ -1,9 +1,8 @@
 use crate::{
-    ID,
+    ID, ROOT_PDA,
     errors::MosaicError,
     instructions::{root_pda_check, signing_session_pda_check},
     invoke_signed_dynamic,
-    seeds::ROOT_PDA,
     state::{
         PackUnpack,
         root::Root,
@@ -39,6 +38,7 @@ impl<'info> TryFrom<&'info [AccountView]> for ExecuteIxAccounts<'info> {
     type Error = ProgramError;
 
     fn try_from(accounts: &'info [AccountView]) -> Result<Self, Self::Error> {
+        // perform accounts attribute check
         let (required_accounts, remaining) = accounts.split_at(5);
         let [payer, root, signing_session, _sys_program, _dst_program] = required_accounts else {
             return Err(ProgramError::NotEnoughAccountKeys);

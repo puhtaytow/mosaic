@@ -3,8 +3,7 @@
 use mollusk_svm::Mollusk;
 
 use mosaic::{
-    ID,
-    seeds::{ROOT_PDA, SIGNING_SESSION_PDA},
+    ID, ROOT_PDA, SIGNING_SESSION_PDA,
     state::{
         root::Root,
         signing_session::{InstructionAccount, SigningSession, SigningSessionPhase},

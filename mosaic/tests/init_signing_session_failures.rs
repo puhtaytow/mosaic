@@ -7,11 +7,11 @@ use {
 };
 
 use mosaic::{
+    ROOT_PDA, SIGNING_SESSION_PDA,
     errors::MosaicError,
     instructions::{
         Instruction as ProgramIx, init_signing_session::InitializeSigningSessionIxData,
     },
-    seeds::{ROOT_PDA, SIGNING_SESSION_PDA},
     state::signing_session::SigningSessionPhase,
 };
 
