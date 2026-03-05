@@ -1,7 +1,7 @@
 [package]
 name = "mosaic"
 description = "multi-signature governance solution that enables threshold-based execution against solana programs"
-version = "0.5.5"
+version = "0.5.6"
 edition = "2024"
 
 [lib]
@@ -11,13 +11,13 @@ crate-type = ["cdylib", "lib"]
 unexpected_cfgs = "allow"
 
 [dependencies]
-pinocchio = "0.10.1"
+pinocchio = "0.10.2"
 pinocchio-pubkey = "0.3.0"
 pinocchio-system = "0.5.0"
-solana-program = "3.0.0"
+solana-program = "4.0.0"
 borsh = { version = "1.6.0", features = ["derive"] }
 
 [dev-dependencies]
-mollusk-svm = "0.10.1"
+mollusk-svm = "0.10.3"
 solana-sdk = "3.0.0"
-solana-program-runtime = "3.1.6"
+solana-program-runtime = "3.1.9"
