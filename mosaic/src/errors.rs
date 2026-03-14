@@ -18,7 +18,7 @@ pub enum MosaicError {
     SignerIsNotOperator,
     SigningSessionIdMustEqualRootLastId,
     ApprovalsDidNotReachThreshold,
-    ProvidedDestinationProgramMismatchWithRootDestinationProgram, /* TODO: make test for this case */
+    ProvidedDestinationProgramMismatchWithRootDestinationProgram,
     ThresholdCanNotBeHigherThanLenOfOperators,
     OperatorsCountMustBePositive,
     ThresholdCanNotBeZero,
