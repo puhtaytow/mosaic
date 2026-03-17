@@ -880,3 +880,85 @@ fn test_execute_destination_program_mismatch_failure() {
         ))],
     );
 }
+
+#[test]
+fn test_execute_missing_remaining_account_rolls_back_phase() {
+    let mut mollusk = Mollusk::new(&PROGRAM_ID, MOSAIC_BINARY_PATH);
+    mollusk.add_program(&DESTINATION_PROGRAM_ID, "tests/spl_record");
+
+    let (system_program, system_account) = mollusk_svm::program::keyed_account_for_system_program();
+    let dst_program_account = AccountSharedData::new(0, 0, &solana_sdk::bpf_loader::id());
+
+    let operators = Operators::new(3, system_program);
+    let operators_pubkey: Vec<_> = operators
+        .operators
+        .iter()
+        .map(|operator| operator.0)
+        .collect();
+    let (signer, signer_account) = operators.operators[0].clone();
+
+    let session_id = 1;
+
+    let (root_pda, _, _, _, root_account) = prepare_root(
+        &mollusk,
+        operators,
+        operators_pubkey.clone(),
+        session_id,
+        DESTINATION_PROGRAM_ID.as_ref().try_into().unwrap(),
+    );
+
+    // Build CPI payload that expects a storage account in `remaining`.
+    let (storage_pda, _storage_pda_account) =
+        prepare_storage_account(&mollusk, session_id, root_pda);
+    let (cpi_instruction_accounts, cpi_instruction_data) =
+        records_program_ix_accs(storage_pda, root_pda);
+
+    let (signing_pda, _signing_pda_bump, _signing_init_state_serialized, signing_account) =
+        prepare_signing_session(
+            &mollusk,
+            session_id,
+            root_pda,
+            vec![signer, operators_pubkey[1]],
+            SigningSessionPhase::Approved,
+            cpi_instruction_accounts,
+            cpi_instruction_data,
+        );
+
+    let ix_data_execute = ExecuteIxData {};
+    let data_execute = [
+        vec![ProgramIx::Execute as u8],
+        to_vec(&ix_data_execute).unwrap(),
+    ]
+    .concat();
+
+    // Intentionally pass only the 5 required accounts and omit the storage account.
+    let instruction = Instruction::new_with_bytes(
+        PROGRAM_ID,
+        &data_execute,
+        vec![
+            AccountMeta::new(signer.into(), true),
+            AccountMeta::new_readonly(root_pda, false),
+            AccountMeta::new(signing_pda, false),
+            AccountMeta::new_readonly(system_program, false),
+            AccountMeta::new_readonly(DESTINATION_PROGRAM_ID, false),
+        ],
+    );
+
+    let result: mollusk_svm::result::InstructionResult = mollusk.process_and_validate_instruction(
+        &instruction,
+        &[
+            (signer.into(), signer_account.clone().into()),
+            (root_pda, root_account.clone().into()),
+            (signing_pda, signing_account.clone().into()),
+            (system_program, system_account.clone().into()),
+            (DESTINATION_PROGRAM_ID, dst_program_account.clone().into()),
+        ],
+        &[Check::err(ProgramError::NotEnoughAccountKeys)],
+    );
+
+    // If state is locked before CPI and call fails, rollback must keep phase unchanged.
+    let updated_signing_session_pda_account = result.get_account(&signing_pda).unwrap();
+    let parsed_signing_session_pda_data =
+        borsh::from_slice::<SigningSession>(&updated_signing_session_pda_account.data).unwrap();
+    assert!(parsed_signing_session_pda_data.phase == SigningSessionPhase::Approved);
+}

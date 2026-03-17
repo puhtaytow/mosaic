@@ -170,6 +170,15 @@ impl<'info> Execute<'info> {
             })
             .collect::<Result<_, _>>()?;
 
+        // Lock the session before external CPI to avoid a reentrancy window.
+        let mut signing_data = signing_data;
+        signing_data.progress_phase_checked()?; /* set signing session phase to executed */
+        let (serialized_data, serialized_len) = signing_data.pack()?;
+        {
+            let mut signing_account = self.accounts.signing_session.try_borrow_mut()?;
+            signing_account[..serialized_len].copy_from_slice(&serialized_data);
+        }
+
         // cpi to destination program
         let instruction = InstructionView {
             program_id: self.accounts._dst_program.address(),
@@ -177,14 +186,6 @@ impl<'info> Execute<'info> {
             data: &signing_data.instruction_data.clone(),
         };
         invoke_signed_dynamic!(&instruction, account_views, &[cpi_signer])?;
-
-        // update signing session / prevent re-execution
-        let mut signing_data = signing_data;
-        signing_data.progress_phase_checked()?; /* set signing session phase to executed */
-
-        let (serialized_data, serialized_len) = signing_data.pack()?;
-        let mut signing_account = self.accounts.signing_session.try_borrow_mut()?;
-        signing_account[..serialized_len].copy_from_slice(&serialized_data);
 
         Ok(())
     }
