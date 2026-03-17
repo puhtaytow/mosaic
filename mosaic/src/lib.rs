@@ -3,8 +3,8 @@ pub mod instructions;
 pub mod state;
 
 use crate::instructions::{
-    Instruction, execute::Execute, init_root::InitializeOperators,
-    init_signing_session::InitializeSigningSession, sign::Sign,
+    Instruction, close_session_account::CloseSessionAccount, execute::Execute,
+    init_root::InitializeOperators, init_signing_session::InitializeSigningSession, sign::Sign,
 };
 use pinocchio::{AccountView, Address, ProgramResult, error::ProgramError, program_entrypoint};
 use solana_program::{custom_heap_default, custom_panic_default};
@@ -40,6 +40,9 @@ pub fn process_instruction(
         }
         Instruction::Sign => Sign::try_from((accounts, data))?.handler(),
         Instruction::Execute => Execute::try_from((accounts, data))?.handler(),
+        Instruction::CloseSessionAccount => {
+            CloseSessionAccount::try_from((accounts, data))?.handler()
+        }
     }
 }
 
