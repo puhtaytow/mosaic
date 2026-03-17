@@ -39,6 +39,9 @@ impl<'info> TryFrom<&'info [AccountView]> for ExecuteIxAccounts<'info> {
 
     fn try_from(accounts: &'info [AccountView]) -> Result<Self, Self::Error> {
         // perform accounts attribute check
+        if accounts.len() < 5 {
+            return Err(ProgramError::NotEnoughAccountKeys);
+        }
         let (required_accounts, remaining) = accounts.split_at(5);
         let [payer, root, signing_session, _sys_program, _dst_program] = required_accounts else {
             return Err(ProgramError::NotEnoughAccountKeys);

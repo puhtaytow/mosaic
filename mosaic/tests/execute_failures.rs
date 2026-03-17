@@ -21,6 +21,50 @@ use solana_sdk::{
 };
 
 #[test]
+fn test_execute_not_enough_accounts_failure() {
+    let mollusk = Mollusk::new(&PROGRAM_ID, MOSAIC_BINARY_PATH);
+    let (system_program, system_account) = mollusk_svm::program::keyed_account_for_system_program();
+
+    let payer = Pubkey::new_unique();
+    let root = Pubkey::new_unique();
+    let signing = Pubkey::new_unique();
+
+    let payer_account = AccountSharedData::new(1_000_000, 0, &system_program);
+    let root_account = AccountSharedData::new(0, 0, &PROGRAM_ID);
+    let signing_account = AccountSharedData::new(0, 0, &PROGRAM_ID);
+
+    let ix_data_execute = ExecuteIxData {};
+    let data_execute = [
+        vec![ProgramIx::Execute as u8],
+        to_vec(&ix_data_execute).unwrap(),
+    ]
+    .concat();
+
+    // only 4 accounts; execute requires at least 5
+    let instruction = Instruction::new_with_bytes(
+        PROGRAM_ID,
+        &data_execute,
+        vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new_readonly(root, false),
+            AccountMeta::new(signing, false),
+            AccountMeta::new_readonly(system_program, false),
+        ],
+    );
+
+    let _result: mollusk_svm::result::InstructionResult = mollusk.process_and_validate_instruction(
+        &instruction,
+        &[
+            (payer, payer_account.into()),
+            (root, root_account.into()),
+            (signing, signing_account.into()),
+            (system_program, system_account.into()),
+        ],
+        &[Check::err(ProgramError::NotEnoughAccountKeys)],
+    );
+}
+
+#[test]
 fn test_execute_payer_is_not_signer_failure() {
     let mut mollusk = Mollusk::new(&PROGRAM_ID, MOSAIC_BINARY_PATH);
     mollusk.add_program(&DESTINATION_PROGRAM_ID, "tests/spl_record");
@@ -836,4 +880,3 @@ fn test_execute_destination_program_mismatch_failure() {
         ))],
     );
 }
-
