@@ -35,6 +35,9 @@ impl<'info> TryFrom<&'info [AccountView]> for CloseSessionAccountIxAccounts<'inf
         if !payer.is_signer() {
             return Err(MosaicError::PayerMustEqualSigner.into());
         }
+        if !payer.is_writable() {
+            return Err(MosaicError::PayerAccountMustBeWritable.into());
+        }
         if !signing_session.is_writable() {
             return Err(MosaicError::SigningSessionAccountMustBeWritable.into());
         }
