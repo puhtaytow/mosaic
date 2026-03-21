@@ -56,7 +56,6 @@ impl<'info> TryFrom<&'info [AccountView]> for SignIxAccounts<'info> {
     }
 }
 
-#[repr(C)]
 #[derive(Clone, Copy, BorshDeserialize, BorshSerialize)]
 pub struct SignIxData {
     pub bump: u8,
