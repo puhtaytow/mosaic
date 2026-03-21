@@ -4,6 +4,7 @@ use crate::{
     ID, {ROOT_PDA, SIGNING_SESSION_PDA},
 };
 
+pub mod close_session_account;
 pub mod execute;
 pub mod init_root;
 pub mod init_signing_session;
@@ -15,6 +16,7 @@ pub enum Instruction {
     InitializeSigningSession,
     Sign,
     Execute,
+    CloseSessionAccount,
 }
 
 impl TryFrom<&u8> for Instruction {
@@ -26,6 +28,7 @@ impl TryFrom<&u8> for Instruction {
             1 => Ok(Instruction::InitializeSigningSession),
             2 => Ok(Instruction::Sign),
             3 => Ok(Instruction::Execute),
+            4 => Ok(Instruction::CloseSessionAccount),
             _ => Err(ProgramError::InvalidInstructionData),
         }
     }

@@ -139,6 +139,13 @@ impl SigningSession {
             .ok_or(MosaicError::SigningSessionPhaseIncorrect.into())
     }
 
+    /// checks if signing session is executed
+    pub fn must_be_executed(&self) -> Result<(), ProgramError> {
+        (self.phase == SigningSessionPhase::Executed)
+            .then_some(())
+            .ok_or(MosaicError::SigningSessionPhaseIncorrect.into())
+    }
+
     /// checks if root last id equals the session id
     pub fn sessions_must_equal(&self, root_last_id: u16) -> Result<(), ProgramError> {
         (self.session_id == root_last_id)

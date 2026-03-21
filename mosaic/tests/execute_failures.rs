@@ -842,8 +842,7 @@ fn test_execute_destination_program_mismatch_failure() {
 
     // wrong destination program
     let wrong_destination_program = Pubkey::new_unique();
-    let wrong_dst_program_account =
-        AccountSharedData::new(0, 0, &solana_sdk::bpf_loader::id());
+    let wrong_dst_program_account = AccountSharedData::new(0, 0, &solana_sdk::bpf_loader::id());
 
     let ix_data_execute = ExecuteIxData {};
     let data_execute = [

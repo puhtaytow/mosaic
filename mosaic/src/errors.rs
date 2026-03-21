@@ -3,6 +3,7 @@ use pinocchio::error::ProgramError;
 #[derive(Debug, Clone, PartialEq)]
 pub enum MosaicError {
     PayerMustEqualSigner = 6000,
+    PayerAccountMustBeWritable,
     RootAccountMustBeWrittable,
     RootAccountMustBeInitialized,
     RootAccountMustNotBeInitialized,
@@ -29,6 +30,9 @@ impl std::fmt::Display for MosaicError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             MosaicError::PayerMustEqualSigner => write!(f, "payer and signer must equal"),
+            MosaicError::PayerAccountMustBeWritable => {
+                write!(f, "payer account must be writable")
+            }
             MosaicError::RootAccountMustBeWrittable => {
                 write!(f, "root account must be writtable")
             }
