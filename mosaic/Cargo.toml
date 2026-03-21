@@ -1,7 +1,7 @@
 [package]
 name = "mosaic"
 description = "multi-signature governance solution that enables threshold-based execution against solana programs"
-version = "0.5.6"
+version = "0.5.7"
 edition = "2024"
 
 [lib]
