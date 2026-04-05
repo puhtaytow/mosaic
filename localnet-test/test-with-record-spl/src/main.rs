@@ -324,6 +324,10 @@ fn run() -> Result<()> {
                 "cargo run --manifest-path ../mosaic-cli/Cargo.toml -- --config {} execute",
                 config_op0_relative.display()
             ),
+            format!(
+                "cargo run --manifest-path ../mosaic-cli/Cargo.toml -- --config {} close-session",
+                config_op0_relative.display()
+            ),
         ],
     };
 
@@ -429,6 +433,10 @@ fn render_bootstrap_text(output: &BootstrapOutput, include_next_steps: bool) -> 
                 "Execute approved session",
                 format_execute_command(&output.config_op0),
             ),
+            (
+                "Close executed session",
+                format_close_session_command(&output.config_op0),
+            ),
         ];
 
         for (index, (label, command)) in steps.iter().enumerate() {
@@ -477,6 +485,13 @@ fn format_sign_command(config_path: &str) -> String {
 fn format_execute_command(config_path: &str) -> String {
     format!(
         "cargo run --manifest-path ../mosaic-cli/Cargo.toml -- --config {} execute",
+        config_path
+    )
+}
+
+fn format_close_session_command(config_path: &str) -> String {
+    format!(
+        "cargo run --manifest-path ../mosaic-cli/Cargo.toml -- --config {} close-session",
         config_path
     )
 }
@@ -563,7 +578,7 @@ fn run_auto_flow(rpc: &RpcClient, ctx: &AutoFlowContext, output: &BootstrapOutpu
         },
     ];
 
-    let total_steps = steps.len();
+    let total_steps = steps.len() + 1;
     for (index, step) in steps.iter().enumerate() {
         run_auto_step(ctx, index + 1, total_steps, step)?;
     }
@@ -572,6 +587,22 @@ fn run_auto_flow(rpc: &RpcClient, ctx: &AutoFlowContext, output: &BootstrapOutpu
     assert_storage_matches_input(&storage_bytes, AUTO_RECORD_SPL_DATA_HEX)?;
     println!();
     println!("Et Voila!");
+    println!(
+        "  The payload landed on-chain as expected. Cleaning up the executed session account."
+    );
+
+    let cleanup_step = AutoStep {
+        title: "Close executed session",
+        explanation: "Closing the executed signing session account to reclaim rent and leave the localnet state tidy.",
+        display_command: format_close_session_command(&output.config_op0),
+        args: vec![
+            "--config".into(),
+            ctx.config_op0.display().to_string(),
+            "close-session".into(),
+        ],
+    };
+    run_auto_step(ctx, total_steps, total_steps, &cleanup_step)?;
+
     Ok(())
 }
 
