@@ -13,7 +13,7 @@ custom_heap_default!();
 custom_panic_default!();
 program_entrypoint!(process_instruction);
 // change the id accordingly
-pinocchio_pubkey::declare_id!("s75D2Kb5WnVBsFQiSLj5E4oRgwDJU63487cSnp2khXh");
+pinocchio_pubkey::declare_id!("7zU6PF3RcfkyDQx68qhriN4JmW8rjkeNFNvF8gYBWNkT");
 
 /// seed of the root PDA.
 pub const ROOT_PDA: &[u8] = b"root_pda";

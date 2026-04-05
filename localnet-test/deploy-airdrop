@@ -1,0 +1,16 @@
+#!/bin/bash
+
+AIRDROP_AMOUNT=2
+NODE_RPC_ENPOINT="http://127.0.0.1:8899"
+
+ACCOUNT_0="8WWCPiGq4HWyzKSPm7BPsTUTuheEA5WRWsekZQq841op" # mosaic wallet
+ACCOUNT_1="2Sg38hanSDkdgFmredHa4GeucSGPN46MiS1yVZ3oW9e7" # mosaic wallet
+ACCOUNT_2="BMAYnyyFS64zhi7ozx4svq3Sfs4GXbv72TeKi83Y9811" # record spl
+ACCOUNT_3="CEYaVad3Cfmy76FvzbEGJuTkDBGyCiUWUDM8AtN8kS8q" # operator 0 / signer in the root repo
+ACCOUNT_4="F9QFw96MxMi9h1Pbz6DeHQzZ1B1XcQDycvm6C5NobqG8" # operator 1 / signer in the root repo
+
+solana airdrop ${AIRDROP_AMOUNT} ${ACCOUNT_0} --url ${NODE_RPC_ENPOINT} 
+solana airdrop ${AIRDROP_AMOUNT} ${ACCOUNT_1} --url ${NODE_RPC_ENPOINT} 
+solana airdrop ${AIRDROP_AMOUNT} ${ACCOUNT_2} --url ${NODE_RPC_ENPOINT} 
+solana airdrop ${AIRDROP_AMOUNT} ${ACCOUNT_3} --url ${NODE_RPC_ENPOINT}
+solana airdrop ${AIRDROP_AMOUNT} ${ACCOUNT_4} --url ${NODE_RPC_ENPOINT}

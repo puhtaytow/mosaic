@@ -1,0 +1,6 @@
+{
+  "rpc_url": "http://127.0.0.1:8899",
+  "keypair": "~/.config/solana/id.json",
+  "program_id": "<YOUR_MOSAIC_PROGRAM_ID>",
+  "commitment": "confirmed"
+}

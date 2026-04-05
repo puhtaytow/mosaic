@@ -1,0 +1,21 @@
+1. deploy-airdrop
+
+2. deploy-mosaic
+
+3. copy program id; if different update and redeploy
+
+4. copy id to config.json of cli
+
+6. deploy-record-spl; this is destination program
+
+7. cargo run -- --config ../localnet-test/cli-config-op0.json init-root \
+--operators "F9QFw96MxMi9h1Pbz6DeHQzZ1B1XcQDycvm6C5NobqG8" \
+--operators "CEYaVad3Cfmy76FvzbEGJuTkDBGyCiUWUDM8AtN8kS8q" \
+--threshold 2 \
+--destination-program "GmWR6PdGcZLUrDhyoFQ8HfQcqixPToj4Y1LRZRfJkkFF"
+
+8. cargo run -- --config ../localnet-test/cli-config-op0.json show-root
+
+9. cargo run -- --config ../localnet-test/cli-config-op0.json init-signing-session \
+--data 0104000000000000000500000068656c6c6f \
+--accounts f83a39e9d12a5b981b931c9062d9a1a137286a79c6a1f90b41c672cba02b56ae0001
