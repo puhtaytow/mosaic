@@ -16,6 +16,18 @@
 
 8. cargo run -- --config ../localnet-test/cli-config-op0.json show-root
 
-9. cargo run -- --config ../localnet-test/cli-config-op0.json init-signing-session \
---data 0104000000000000000500000068656c6c6f \
---accounts f83a39e9d12a5b981b931c9062d9a1a137286a79c6a1f90b41c672cba02b56ae0001
+9. cargo run -- --config ../localnet-test/cli-config-op0.json init-session \
+  --data 0104000000000000000500000068656c6c6f \
+  --accounts f83a39e9d12a5b981b931c9062d9a1a137286a79c6a1f90b41c672cba02b56ae0001
+
+10. cargo run -- --config ../localnet-test/cli-config-op0.json list-sessions
+
+11. cargo run -- --config ../localnet-test/cli-config-op0.json sign
+
+12. cargo run -- --config ../localnet-test/cli-config-op0.json list-sessions
+
+13. cargo run -- --config ../localnet-test/cli-config-op1.json sign
+
+14. cargo run -- --config ../localnet-test/cli-config-op0.json list-sessions // should be approved now
+
+15. 

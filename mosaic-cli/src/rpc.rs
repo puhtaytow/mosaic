@@ -1,11 +1,13 @@
 use anyhow::{Context, Result, anyhow, bail};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 use solana_account::Account;
+use solana_account_decoder_client_types::UiAccountEncoding;
 use solana_keypair::{Keypair, read_keypair_file};
 use solana_pubkey::Pubkey;
 use solana_rpc_client::rpc_client::RpcClient;
 use solana_rpc_client_types::{
     config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
-    filter::{Memcmp, RpcFilterType},
+    filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType},
 };
 use solana_signer::Signer;
 use solana_transaction::Transaction;
@@ -16,13 +18,13 @@ use std::{
 };
 
 use crate::{
-    cli::{ClientConfig, SessionSelectorArgs},
+    cli::{ClientConfig, DataEncodingArg, SessionSelectorArgs},
     instructions::{derive_root_pda, derive_signing_session_pda},
     models::{
-        InstructionAccountView, LoadedRoot, LoadedSession, LoadedSessionSpec, ResolvedSession,
-        SessionSpecFile,
+        DataEncoding, InstructionAccountView, LoadedRoot, LoadedSession, LoadedSessionSpec,
+        ResolvedSession, SessionSpecFile,
     },
-    util::{address_to_pubkey, decode_data, expand_path},
+    util::{address_to_pubkey, decode_data, decode_hex, expand_path},
 };
 use mosaic::state::{
     PackUnpack,
@@ -44,11 +46,12 @@ pub(crate) fn list_sessions(
         .get_program_ui_accounts_with_config(
             &config.program_id,
             RpcProgramAccountsConfig {
-                filters: Some(vec![RpcFilterType::Memcmp(Memcmp::new_raw_bytes(
+                filters: Some(vec![RpcFilterType::Memcmp(Memcmp::new(
                     2,
-                    root_pda.to_bytes().to_vec(),
+                    MemcmpEncodedBytes::Base64(BASE64_STANDARD.encode(root_pda.to_bytes())),
                 ))]),
                 account_config: RpcAccountInfoConfig {
+                    encoding: Some(UiAccountEncoding::Base64),
                     commitment: Some(config.commitment.clone()),
                     ..Default::default()
                 },
@@ -134,9 +137,69 @@ pub(crate) fn send_instruction(
             &transaction,
             config.commitment.clone(),
         )
-        .context("failed to send Mosaic transaction")?;
+        .map_err(humanize_mosaic_transaction_error)?;
 
     Ok(signature.to_string())
+}
+
+fn humanize_mosaic_transaction_error(
+    error: solana_rpc_client::api::client_error::Error,
+) -> anyhow::Error {
+    let error_text = error.to_string();
+
+    if let Some(code) = extract_custom_program_error_code(&error_text) {
+        if let Some(message) = mosaic_error_message(code) {
+            return anyhow!(
+                "failed to send Mosaic transaction: {} (Mosaic program error {:#x} / {})",
+                message,
+                code,
+                code
+            );
+        }
+    }
+
+    anyhow!("failed to send Mosaic transaction: {error_text}")
+}
+
+fn extract_custom_program_error_code(error_text: &str) -> Option<u32> {
+    let marker = "custom program error: 0x";
+    let start = error_text.find(marker)? + marker.len();
+    let hex = error_text[start..]
+        .chars()
+        .take_while(|c| c.is_ascii_hexdigit())
+        .collect::<String>();
+
+    (!hex.is_empty())
+        .then(|| u32::from_str_radix(&hex, 16).ok())
+        .flatten()
+}
+
+fn mosaic_error_message(code: u32) -> Option<&'static str> {
+    match code {
+        6000 => Some("payer and signer must equal"),
+        6001 => Some("payer account must be writable"),
+        6002 => Some("root account must be writable"),
+        6003 => Some("root account must be initialized"),
+        6004 => Some("root account must not be initialized"),
+        6005 => Some("root account owner must equal the Mosaic program id"),
+        6006 => Some("signing session account must be writable"),
+        6007 => Some("signing session account must be initialized"),
+        6008 => Some("signing session account must not be initialized"),
+        6009 => Some("signing session account owner must equal the Mosaic program id"),
+        6010 => Some("signing session phase is incorrect for this action"),
+        6011 => Some("provided destination program does not match the root destination program"),
+        6012 => Some("signing session is already at the final stage"),
+        6013 => Some("this operator already approved the signing session"),
+        6014 => Some("the signer is not one of the configured operators"),
+        6015 => Some("signing session id must equal root last id"),
+        6016 => Some("approvals did not reach the configured threshold"),
+        6017 => Some("root destination program must match the provided CPI program id"),
+        6018 => Some("threshold cannot be higher than the number of operators"),
+        6019 => Some("there must be at least one operator"),
+        6020 => Some("threshold cannot be zero"),
+        6021 => Some("maximum operators limit reached"),
+        _ => None,
+    }
 }
 
 pub(crate) fn load_default_signer(config: &ClientConfig) -> Result<Keypair> {
@@ -175,6 +238,29 @@ pub(crate) fn load_session_spec(path: &Path) -> Result<LoadedSessionSpec> {
             .0;
 
         instruction_accounts.push(serialized);
+    }
+
+    Ok(LoadedSessionSpec {
+        instruction_data,
+        instruction_accounts,
+    })
+}
+
+pub(crate) fn load_inline_session_spec(
+    data_encoding: DataEncodingArg,
+    data: &str,
+    accounts: &[String],
+) -> Result<LoadedSessionSpec> {
+    let instruction_data = decode_data(data_encoding.into(), data)?;
+    let mut instruction_accounts = Vec::with_capacity(accounts.len());
+
+    for raw_account in accounts {
+        let bytes = decode_hex(raw_account)
+            .with_context(|| format!("invalid inline account `{raw_account}`"))?;
+        SessionInstructionAccount::deserialize(&bytes).map_err(|error| {
+            anyhow!("failed to decode inline instruction account `{raw_account}`: {error:?}")
+        })?;
+        instruction_accounts.push(bytes);
     }
 
     Ok(LoadedSessionSpec {
@@ -306,4 +392,14 @@ fn verify_session_matches_root(
 fn load_keypair(path: &Path) -> Result<Keypair> {
     read_keypair_file(path)
         .map_err(|error| anyhow!("failed to read keypair from {}: {error}", path.display()))
+}
+
+impl From<DataEncodingArg> for DataEncoding {
+    fn from(value: DataEncodingArg) -> Self {
+        match value {
+            DataEncodingArg::Hex => DataEncoding::Hex,
+            DataEncodingArg::Base64 => DataEncoding::Base64,
+            DataEncodingArg::Utf8 => DataEncoding::Utf8,
+        }
+    }
 }

@@ -1538,6 +1538,7 @@ dependencies = [
  "serde_json",
  "shellexpand",
  "solana-account",
+ "solana-account-decoder-client-types",
  "solana-commitment-config",
  "solana-instruction",
  "solana-keypair",

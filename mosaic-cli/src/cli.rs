@@ -56,8 +56,17 @@ pub(crate) struct InitRootArgs {
 
 #[derive(Args, Debug)]
 pub(crate) struct InitSessionArgs {
-    #[arg(long, value_name = "PATH")]
-    pub(crate) spec: PathBuf,
+    #[arg(long, value_name = "PATH", conflicts_with = "data")]
+    pub(crate) spec: Option<PathBuf>,
+
+    #[arg(long, value_name = "HEX_OR_BASE64_OR_TEXT", conflicts_with = "spec")]
+    pub(crate) data: Option<String>,
+
+    #[arg(long, value_name = "HEX_ACCOUNT", requires = "data")]
+    pub(crate) accounts: Vec<String>,
+
+    #[arg(long, value_enum, default_value_t = DataEncodingArg::Hex, requires = "data")]
+    pub(crate) data_encoding: DataEncodingArg,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -94,6 +103,14 @@ impl CommitmentArg {
             CommitmentArg::Finalized => CommitmentConfig::finalized(),
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, ValueEnum)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum DataEncodingArg {
+    Hex,
+    Base64,
+    Utf8,
 }
 
 #[derive(Clone)]
