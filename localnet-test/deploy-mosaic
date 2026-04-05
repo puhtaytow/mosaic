@@ -1,4 +1,4 @@
 #!/bin/bash
 # compile / (re)deploy
 cargo build-sbf --manifest-path ../mosaic/Cargo.toml
-solana program deploy ../mosaic/target/deploy/mosaic.so --keypair ./mosaic-keypair.json --url http://127.0.0.1:8899
+solana program deploy ../mosaic/target/deploy/mosaic.so --program-id ./mosaic-keypair.json --url http://127.0.0.1:8899

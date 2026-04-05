@@ -1,0 +1,19 @@
+#!/bin/bash
+set -euo pipefail
+
+# TO RUN A-Z FULL AUTO MODE
+# ./init-localnet --mode auto --pause-ms 3000
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
+
+cargo run --manifest-path "${SCRIPT_DIR}/test-with-record-spl/Cargo.toml" -- \
+  --config-op0 "${SCRIPT_DIR}/cli-config-op0.json" \
+  --config-op1 "${SCRIPT_DIR}/cli-config-op1.json" \
+  --mosaic-program-keypair "${SCRIPT_DIR}/../mosaic/target/deploy/mosaic-keypair.json" \
+  --record-program-keypair "${SCRIPT_DIR}/recspl-keypair.json" \
+  --mosaic-manifest "${SCRIPT_DIR}/../mosaic/Cargo.toml" \
+  --mosaic-binary "${SCRIPT_DIR}/../mosaic/target/deploy/mosaic.so" \
+  --record-program-binary "${SCRIPT_DIR}/../mosaic/tests/spl_record.so" \
+  --mosaic-cli-manifest "${SCRIPT_DIR}/../mosaic-cli/Cargo.toml" \
+  --storage-keypair "${SCRIPT_DIR}/record-storage-keypair.json" \
+  "$@"

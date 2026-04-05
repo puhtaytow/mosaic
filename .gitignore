@@ -1,3 +1,4 @@
 target
 mosaic/target
 mosaic-cli/config.json
+localnet-test/record-storage-keypair.json
