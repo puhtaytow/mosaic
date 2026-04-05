@@ -16,3 +16,46 @@ Mosaic is currently work in progress and has not been audited.
 Due to the lack of a security audit and the evolving nature of the codebase, it is strongly recommended not to use mainnet.
 
 Use only for development, testing, or experimental purposes until a stable release.
+
+## Configure Mosaic With Your Program
+
+Short version: Mosaic stores an instruction, collects approvals for it, and later executes that exact CPI against your program.
+
+### Step by Step
+
+1. Define the instruction in your program that should be governed by Mosaic.
+   It should be a normal Solana instruction with explicit instruction data and account metas.
+
+2. Decide which authority your program expects for that instruction.
+   If Mosaic should approve and execute it, that authority should be the Mosaic root PDA, passed as one of the CPI accounts with the correct `signer` and `writable` flags.
+
+3. Deploy your program and note its program id.
+   This becomes `destination_program` in Mosaic and is locked into the root configuration.
+
+4. Configure `mosaic-cli` for your environment.
+   Put `rpc_url`, operator `keypair`, Mosaic `program_id`, and your target `destination_program` in `mosaic-cli/config.json`. See [`mosaic-cli/README.md`](mosaic-cli/README.md) for the CLI format.
+
+5. Initialize the Mosaic root.
+   Create the root with your operator set and threshold. From that point, only sessions targeting the configured `destination_program` can be executed through that root.
+
+6. Create a signing session with your program instruction.
+   Encode the exact instruction data your program expects and include every CPI account the instruction needs. If your instruction expects the Mosaic root PDA, include it in the session account list too.
+
+7. Collect approvals from operators.
+   Each operator signs the session until the threshold is reached.
+
+8. Execute the approved session.
+   Mosaic performs CPI into your program using the stored instruction data and stored account list. The destination program receives exactly those accounts, so missing or wrong account metas must be fixed at session creation time, not at execute time.
+
+9. Verify the result in your program-owned accounts.
+   Mosaic marks the session as executed, but the real success criterion is whether your program state changed as expected.
+
+### What Your Program Must Expect
+
+- The destination program id must match the one configured in the Mosaic root.
+- All accounts required by the destination instruction must be provided up front in the signing session.
+- If your instruction requires a signer authority controlled by Mosaic, use the Mosaic root PDA as that account and mark it correctly in the session account metas.
+
+### Local Example
+
+If you want a minimal end-to-end example, use the local harness in [`localnet-test/init-localnet`](localnet-test/init-localnet). It deploys Mosaic, prepares a sample destination program, funds test operators, and prints the exact commands for the manual flow or can run the full flow automatically.
