@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 mod cli;
 mod commands;
 mod instructions;
@@ -6,9 +8,6 @@ mod rpc;
 mod util;
 mod views;
 
-fn main() {
-    if let Err(error) = commands::run() {
-        eprintln!("error: {error:#}");
-        std::process::exit(1);
-    }
+fn main() -> Result<()> {
+    commands::run()
 }
