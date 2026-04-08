@@ -171,8 +171,9 @@ fn run() -> Result<()> {
     rpc.get_latest_blockhash()
         .context("failed to reach the RPC node; start or reset the local validator first")?;
 
-    let op0_keypair = load_keypair(&op0.keypair_path)?;
-    let op1_keypair = load_keypair(&op1.keypair_path)?;
+    eprintln!("Generating fresh operator keypairs");
+    let (op0_keypair, _) = create_fresh_keypair(&op0.keypair_path)?;
+    let (op1_keypair, _) = create_fresh_keypair(&op1.keypair_path)?;
 
     eprintln!("Airdropping operator wallets");
     airdrop(&op0.file.rpc_url, cli.airdrop_sol, &op0_keypair.pubkey())?;
@@ -185,14 +186,15 @@ fn run() -> Result<()> {
     let expected_mosaic_program = Pubkey::new_from_array(mosaic::ID);
     if mosaic_program != expected_mosaic_program {
         bail!(
-            "mosaic program keypair {} resolves to {}, but the compiled program declares id {}. Use the generated keypair at `mosaic/target/deploy/mosaic-keypair.json` or change `declare_id!` to match",
+            "mosaic program keypair {} resolves to {}, but the compiled program declares id {}. Use the canonical keypair at `localnet-test/mosaic-keypair.json` or change `declare_id!` to match",
             expand_path(&cli.mosaic_program_keypair)?.display(),
             mosaic_program,
             expected_mosaic_program
         );
     }
 
-    let record_program = load_keypair(&cli.record_program_keypair)?.pubkey();
+    let (record_program_keypair, _) = create_fresh_keypair(&cli.record_program_keypair)?;
+    let record_program = record_program_keypair.pubkey();
     let (root_pda, _) = Pubkey::find_program_address(&[mosaic::ROOT_PDA], &mosaic_program);
 
     ensure_program_address_is_clean(&rpc, &mosaic_program, "Mosaic")?;

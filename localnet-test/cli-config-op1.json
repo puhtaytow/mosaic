@@ -1,6 +1,6 @@
 {
   "rpc_url": "http://127.0.0.1:8899",
-  "keypair": "../localnet-test/CEYaVad3Cfmy76FvzbEGJuTkDBGyCiUWUDM8AtN8kS8q-second-operator-keypair.json",
-  "program_id": "7zU6PF3RcfkyDQx68qhriN4JmW8rjkeNFNvF8gYBWNkT",
+  "keypair": "./operator-1-keypair.json",
+  "program_id": "ACexBCiahYCKHoHu2q6uSp4Z1wvQ6Uc5CRqQGVhcEWZ8",
   "commitment": "confirmed"
 }

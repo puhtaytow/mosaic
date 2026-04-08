@@ -12,8 +12,9 @@ use solana_program::{custom_heap_default, custom_panic_default};
 custom_heap_default!();
 custom_panic_default!();
 program_entrypoint!(process_instruction);
+
 // change the id accordingly
-pinocchio_pubkey::declare_id!("7zU6PF3RcfkyDQx68qhriN4JmW8rjkeNFNvF8gYBWNkT");
+pinocchio_pubkey::declare_id!("ACexBCiahYCKHoHu2q6uSp4Z1wvQ6Uc5CRqQGVhcEWZ8");
 
 /// seed of the root PDA.
 pub const ROOT_PDA: &[u8] = b"root_pda";

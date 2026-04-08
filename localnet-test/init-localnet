@@ -9,8 +9,8 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd)"
 cargo run --manifest-path "${SCRIPT_DIR}/test-with-record-spl/Cargo.toml" -- \
   --config-op0 "${SCRIPT_DIR}/cli-config-op0.json" \
   --config-op1 "${SCRIPT_DIR}/cli-config-op1.json" \
-  --mosaic-program-keypair "${SCRIPT_DIR}/../mosaic/target/deploy/mosaic-keypair.json" \
-  --record-program-keypair "${SCRIPT_DIR}/recspl-keypair.json" \
+  --mosaic-program-keypair "${SCRIPT_DIR}/mosaic-keypair.json" \
+  --record-program-keypair "${SCRIPT_DIR}/record-program-keypair.json" \
   --mosaic-manifest "${SCRIPT_DIR}/../mosaic/Cargo.toml" \
   --mosaic-binary "${SCRIPT_DIR}/../mosaic/target/deploy/mosaic.so" \
   --record-program-binary "${SCRIPT_DIR}/../mosaic/tests/spl_record.so" \

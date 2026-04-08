@@ -1,4 +1,7 @@
 target
 mosaic/target
 mosaic-cli/config.json
+localnet-test/operator-0-keypair.json
+localnet-test/operator-1-keypair.json
+localnet-test/record-program-keypair.json
 localnet-test/record-storage-keypair.json
