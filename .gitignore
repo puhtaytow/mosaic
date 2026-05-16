@@ -1,2 +1,4 @@
 target
 mosaic/target
+mosaic-cli/config.json
+localnet-test/*
