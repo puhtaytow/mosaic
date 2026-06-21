@@ -56,7 +56,7 @@ fn test_close_session_account() {
             &mollusk,
             session_id,
             root_pda,
-            vec![signer, operators_pubkey[1]],
+            approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
             SigningSessionPhase::Executed,
             cpi_instruction_accounts,
             cpi_instruction_data,
