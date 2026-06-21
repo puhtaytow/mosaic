@@ -66,7 +66,7 @@ fn test_sign_payer_is_not_signer_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![], // approvals
+            0, // approvals bitmap
             SigningSessionPhase::Active,
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -147,7 +147,7 @@ fn test_sign_last_wrap_session() {
             &mollusk,
             session_id,
             root_pda,
-            vec![operators_pubkey[1]], // approvals
+            approvals_bitmap(&operators_pubkey, &[operators_pubkey[1]]),
             SigningSessionPhase::Active,
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -186,8 +186,16 @@ fn test_sign_last_wrap_session() {
     let parsed_data = borsh::from_slice::<SigningSession>(&updated_data.data).unwrap();
 
     assert!(parsed_data.phase == SigningSessionPhase::Approved);
-    assert!(parsed_data.approvals.contains(&signer));
-    assert!(parsed_data.approvals.contains(&operators_pubkey[1]));
+    assert!(has_approval(
+        &operators_pubkey,
+        parsed_data.approvals_bitmap,
+        signer
+    ));
+    assert!(has_approval(
+        &operators_pubkey,
+        parsed_data.approvals_bitmap,
+        operators_pubkey[1]
+    ));
     assert!(parsed_data.bump == signing_pda_bump)
 }
 
@@ -217,7 +225,7 @@ fn test_sign_twice_same_signer_failure() {
     ) = prepare_root(
         &mollusk,
         operators,
-        operators_pubkey,
+        operators_pubkey.clone(),
         session_id,
         DESTINATION_PROGRAM_ID.as_ref().try_into().unwrap(),
     );
@@ -236,7 +244,7 @@ fn test_sign_twice_same_signer_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![signer], // approvals
+            approvals_bitmap(&operators_pubkey, &[signer]),
             SigningSessionPhase::Active,
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -323,7 +331,7 @@ fn test_sign_signer_is_not_operator_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![not_operator_signer.pubkey()], // approvals
+            0, // approvals bitmap
             SigningSessionPhase::Active,
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -390,7 +398,7 @@ fn test_sign_root_incorrect_owner_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![],
+            0,
             SigningSessionPhase::Active,
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -461,7 +469,7 @@ fn test_sign_signing_session_not_writable_failure() {
         &mollusk,
         session_id,
         root_pda,
-        vec![],
+        0,
         SigningSessionPhase::Active,
         cpi_instruction_accounts,
         cpi_instruction_data,

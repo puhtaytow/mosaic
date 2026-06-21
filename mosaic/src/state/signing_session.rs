@@ -70,8 +70,8 @@ pub struct SigningSession {
     /// current phase
     pub phase: SigningSessionPhase,
 
-    /// keys of operators who signed
-    pub approvals: Vec<Address>,
+    /// bitmap of operators who signed, indexed by Root::operators order
+    pub approvals_bitmap: u32,
 
     /// instruction data to execute after consensus being reached
     pub instruction_data: Vec<u8>,
@@ -89,7 +89,7 @@ impl SigningSession {
             session_id: id,
             root_pda: *root_pda,
             phase: SigningSessionPhase::Active,
-            approvals: Vec::new(),
+            approvals_bitmap: 0,
             instruction_data: data.instruction_data,
             instruction_accounts: data.instruction_accounts,
             bump: data.bump,
@@ -98,9 +98,9 @@ impl SigningSession {
 }
 
 impl SigningSession {
-    /// checks if amount of approvals reached expected threshold    
+    /// checks if amount of approvals reached expected threshold
     pub fn check_approvals_reaching_threshold(&self, threshold: usize) -> bool {
-        self.approvals.len() == threshold
+        self.approvals_bitmap.count_ones() as usize == threshold
     }
 
     /// progress signing phase with check
@@ -115,13 +115,17 @@ impl SigningSession {
         Ok(())
     }
 
-    /// push signer approval with check if it already was casted
-    pub fn approve_checked(&mut self, signer: &Address) -> Result<(), ProgramError> {
-        (!self.approvals.contains(signer))
+    /// marks signer approval with check if it already was casted
+    pub fn approve_checked(&mut self, signer_index: usize) -> Result<(), ProgramError> {
+        let signer_mask = 1_u32
+            .checked_shl(signer_index as u32)
+            .ok_or(ProgramError::ArithmeticOverflow)?;
+
+        (self.approvals_bitmap & signer_mask == 0)
             .then_some(())
             .ok_or::<ProgramError>(MosaicError::SigningSessionSignerAlreadyApproved.into())?;
 
-        self.approvals.push(*signer);
+        self.approvals_bitmap |= signer_mask;
         Ok(())
     }
 

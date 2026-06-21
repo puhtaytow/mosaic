@@ -35,6 +35,14 @@ impl Root {
 }
 
 impl Root {
+    /// returns signer index among known operators
+    pub fn operator_index(&self, signer: &Address) -> Result<usize, ProgramError> {
+        self.operators
+            .iter()
+            .position(|operator| operator == signer)
+            .ok_or(MosaicError::SignerIsNotOperator.into())
+    }
+
     /// check if destination program address match passed within instruction
     pub fn destination_program_address_must_match(
         &self,
@@ -47,10 +55,7 @@ impl Root {
 
     /// checks if signer is present among known operators
     pub fn signer_must_be_operator(&self, signer: &Address) -> Result<(), ProgramError> {
-        self.operators
-            .contains(signer)
-            .then_some(())
-            .ok_or(MosaicError::SignerIsNotOperator.into())
+        self.operator_index(signer).map(|_| ())
     }
 
     /// increments last id session

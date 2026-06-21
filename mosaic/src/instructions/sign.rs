@@ -5,11 +5,7 @@ use crate::{
     state::{PackUnpack, root::Root, signing_session::SigningSession},
 };
 use borsh::{BorshDeserialize, BorshSerialize};
-use pinocchio::{
-    AccountView, Address, ProgramResult,
-    error::ProgramError,
-    sysvars::{Sysvar, rent::Rent},
-};
+use pinocchio::{AccountView, Address, ProgramResult, error::ProgramError};
 
 /// Sign Session
 ///
@@ -110,7 +106,8 @@ impl<'info> Sign<'info> {
         drop(signing_account);
 
         Self::mandatory_checks(&signing, &root_data, self.accounts.payer.address())?;
-        signing.approve_checked(self.accounts.payer.address())?;
+        let signer_index = root_data.operator_index(self.accounts.payer.address())?;
+        signing.approve_checked(signer_index)?;
 
         if signing.check_approvals_reaching_threshold(root_data.threshold.into()) {
             signing.progress_phase_checked()?;
@@ -118,24 +115,11 @@ impl<'info> Sign<'info> {
         let (signing, new_signing_len) = signing.pack()?;
 
         if new_signing_len != signing_current_account_size {
-            let rent = Rent::get()?;
-            let new_minimum_balance = rent.try_minimum_balance(new_signing_len)?;
-            let current_lamports = self.accounts.signing_session.lamports();
-
-            // top-up missing rent
-            if current_lamports < new_minimum_balance {
-                pinocchio_system::instructions::Transfer {
-                    from: self.accounts.payer,
-                    to: self.accounts.signing_session,
-                    lamports: new_minimum_balance - current_lamports,
-                }
-                .invoke()?;
-            }
-            self.accounts.signing_session.resize(new_signing_len)?;
-
-            let mut signing_account = self.accounts.signing_session.try_borrow_mut()?;
-            signing_account[..new_signing_len].copy_from_slice(&signing);
+            return Err(ProgramError::InvalidAccountData);
         }
+
+        let mut signing_account = self.accounts.signing_session.try_borrow_mut()?;
+        signing_account[..new_signing_len].copy_from_slice(&signing);
 
         Ok(())
     }
