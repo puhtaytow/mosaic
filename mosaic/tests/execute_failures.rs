@@ -112,8 +112,8 @@ fn test_execute_payer_is_not_signer_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![payer, operators_pubkey[1]], // approvals
-            SigningSessionPhase::Approved,    // signing session phase / must be Approved to Execute
+            approvals_bitmap(&operators_pubkey, &[payer, operators_pubkey[1]]),
+            SigningSessionPhase::Approved, // signing session phase / must be Approved to Execute
             cpi_instruction_accounts,
             cpi_instruction_data,
         );
@@ -206,8 +206,8 @@ fn test_re_execute_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![signer, operators_pubkey[1]], // approvals
-            SigningSessionPhase::Executed,     // signing session phase
+            approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
+            SigningSessionPhase::Executed, // signing session phase
             cpi_instruction_accounts,
             cpi_instruction_data,
         );
@@ -312,8 +312,8 @@ fn test_execute_active_phase_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![signer, operators_pubkey[1]], // approvals
-            SigningSessionPhase::Active,       // signing session phase
+            approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
+            SigningSessionPhase::Active, // signing session phase
             cpi_instruction_accounts,
             cpi_instruction_data,
         );
@@ -408,7 +408,7 @@ fn test_execute_signing_session_not_writable_failure() {
         &mollusk,
         session_id,
         root_pda,
-        vec![signer, operators_pubkey[1]],
+        approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
         SigningSessionPhase::Approved,
         cpi_instruction_accounts,
         cpi_instruction_data,
@@ -488,7 +488,7 @@ fn test_execute_root_incorrect_owner_failure() {
         &mollusk,
         session_id,
         root_pda,
-        vec![signer, operators_pubkey[1]],
+        approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
         SigningSessionPhase::Approved,
         cpi_instruction_accounts,
         cpi_instruction_data,
@@ -568,7 +568,7 @@ fn test_execute_signing_session_incorrect_owner_failure() {
         session_id,
         root_pda: root_pda,
         phase: SigningSessionPhase::Approved,
-        approvals: vec![signer, operators_pubkey[1]],
+        approvals_bitmap: approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
         instruction_data: vec![],
         instruction_accounts: vec![],
         bump: 0,
@@ -740,7 +740,7 @@ fn test_execute_but_session_id_does_not_equal_root_last_id_failure() {
             &mollusk,
             wrong_session_id_does_not_equal_root,
             root_pda,
-            vec![signer, operators_pubkey[1]], // approvals
+            approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
             SigningSessionPhase::Approved, // signing session phase / must be Approved to Execute
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -830,7 +830,7 @@ fn test_execute_destination_program_mismatch_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![signer, operators_pubkey[1]],
+            approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
             SigningSessionPhase::Approved,
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -917,7 +917,7 @@ fn test_execute_missing_remaining_account_rolls_back_phase() {
             &mollusk,
             session_id,
             root_pda,
-            vec![signer, operators_pubkey[1]],
+            approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
             SigningSessionPhase::Approved,
             cpi_instruction_accounts,
             cpi_instruction_data,

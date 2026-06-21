@@ -113,7 +113,7 @@ pub fn prepare_signing_session(
     mollusk: &Mollusk,
     session_id: u16,
     root_pda: Pubkey,
-    approvals: Vec<Pubkey>,
+    approvals_bitmap: u32,
     phase: SigningSessionPhase,
     cpi_instruction_accounts: Vec<Vec<u8>>,
     cpi_instruction_data: Vec<u8>,
@@ -130,7 +130,7 @@ pub fn prepare_signing_session(
         session_id,
         root_pda,
         phase,
-        approvals,
+        approvals_bitmap,
         instruction_data: cpi_instruction_data,
         instruction_accounts: cpi_instruction_accounts,
         bump: signing_pda_bump,
@@ -148,6 +148,23 @@ pub fn prepare_signing_session(
         signing_init_state_serialized,
         signing_account,
     )
+}
+
+pub fn approvals_bitmap(operators: &[Pubkey], approvals: &[Pubkey]) -> u32 {
+    approvals.iter().fold(0_u32, |bitmap, approval| {
+        let index = operators
+            .iter()
+            .position(|operator| operator == approval)
+            .expect("approval must belong to operators");
+        bitmap | (1_u32 << index)
+    })
+}
+
+pub fn has_approval(operators: &[Pubkey], bitmap: u32, approval: Pubkey) -> bool {
+    let Some(index) = operators.iter().position(|operator| *operator == approval) else {
+        return false;
+    };
+    bitmap & (1_u32 << index) != 0
 }
 
 /// prepares records program data
