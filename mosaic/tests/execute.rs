@@ -64,7 +64,7 @@ fn test_execute() {
             &mollusk,
             session_id,
             root_pda,
-            vec![signer, operators_pubkey[1]], // approvals
+            approvals_bitmap(&operators_pubkey, &[signer, operators_pubkey[1]]),
             SigningSessionPhase::Approved, // signing session phase / must be Approved to Execute
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -116,11 +116,15 @@ fn test_execute() {
 
     assert!(updated_storage_pda_account != copy_of_initial_storage_data,);
     assert!(parsed_signing_session_pda_data.phase == SigningSessionPhase::Executed);
-    assert!(parsed_signing_session_pda_data.approvals.contains(&signer));
-    assert!(
-        parsed_signing_session_pda_data
-            .approvals
-            .contains(&operators_pubkey[1])
-    );
+    assert!(has_approval(
+        &operators_pubkey,
+        parsed_signing_session_pda_data.approvals_bitmap,
+        signer
+    ));
+    assert!(has_approval(
+        &operators_pubkey,
+        parsed_signing_session_pda_data.approvals_bitmap,
+        operators_pubkey[1]
+    ));
     assert!(parsed_signing_session_pda_data.bump == signing_pda_bump)
 }

@@ -118,7 +118,7 @@ fn test_initialize_signing_session() {
     assert!(parsed_root_pda_data.last_id == parsed_signing_session_pda_data.session_id);
     assert!(parsed_signing_session_pda_data.root_pda == root_pda);
     assert!(parsed_signing_session_pda_data.phase == SigningSessionPhase::Active);
-    assert!(parsed_signing_session_pda_data.approvals.is_empty());
+    assert!(parsed_signing_session_pda_data.approvals_bitmap == 0);
     assert!(parsed_signing_session_pda_data.instruction_data == cpi_instruction_data);
     assert!(parsed_signing_session_pda_data.instruction_accounts == cpi_instruction_accounts);
     assert!(parsed_signing_session_pda_data.bump == signing_pda_bump)

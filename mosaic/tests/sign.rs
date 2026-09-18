@@ -39,7 +39,7 @@ fn test_sign() {
     ) = prepare_root(
         &mollusk,
         operators,
-        operators_pubkey,
+        operators_pubkey.clone(),
         session_id,
         DESTINATION_PROGRAM_ID.as_ref().try_into().unwrap(),
     );
@@ -58,7 +58,7 @@ fn test_sign() {
             &mollusk,
             session_id,
             root_pda,
-            vec![], // approvals
+            0, // approvals bitmap
             SigningSessionPhase::Active,
             cpi_instruction_accounts,
             cpi_instruction_data,
@@ -101,6 +101,10 @@ fn test_sign() {
     assert!(parsed_signing_session_pda_data.session_id == session_id);
     assert!(parsed_signing_session_pda_data.root_pda == root_pda);
     assert!(parsed_signing_session_pda_data.phase == SigningSessionPhase::Active);
-    assert!(parsed_signing_session_pda_data.approvals.contains(&signer));
+    assert!(has_approval(
+        &operators_pubkey,
+        parsed_signing_session_pda_data.approvals_bitmap,
+        signer
+    ));
     assert!(parsed_signing_session_pda_data.bump == signing_pda_bump)
 }

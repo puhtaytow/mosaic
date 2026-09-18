@@ -540,7 +540,7 @@ fn test_re_initialize_signing_session_failure() {
             &mollusk,
             session_id,
             root_pda,
-            vec![], // approvals
+            0, // approvals bitmap
             SigningSessionPhase::Active,
             cpi_instruction_accounts.clone(),
             cpi_instruction_data.clone(),
