@@ -34,7 +34,7 @@ impl TryFrom<&u8> for Instruction {
     }
 }
 
-/// Checks if the provided signing session PDA is correct
+/// Checks that the signing session address and bump are canonical.
 pub fn signing_session_pda_check(
     key: &Address,
     root_pda: &[u8],
@@ -43,24 +43,24 @@ pub fn signing_session_pda_check(
 ) -> Result<(), ProgramError> {
     check_pda(
         key,
-        &[
-            root_pda,
-            &session_id.to_be_bytes(),
-            SIGNING_SESSION_PDA,
-            bump,
-        ],
+        &[root_pda, &session_id.to_be_bytes(), SIGNING_SESSION_PDA],
+        bump,
     )
 }
 
-/// Checks if the provided root PDA is correct
+/// Checks that the root address and bump are canonical for this deployment.
 pub fn root_pda_check(key: &Address, bump: &[u8]) -> Result<(), ProgramError> {
-    check_pda(key, &[ROOT_PDA, bump])
+    check_pda(key, &[ROOT_PDA], bump)
 }
 
-fn check_pda(key: &Address, seeds: &[&[u8]]) -> Result<(), ProgramError> {
-    let found_pda = Address::create_program_address(seeds, &ID.into())
-        .map_err(|_| ProgramError::InvalidSeeds)?;
-    if key != &found_pda {
+/// Checks the canonical PDA using seeds without the separately supplied bump.
+fn check_pda(key: &Address, seeds: &[&[u8]], bump: &[u8]) -> Result<(), ProgramError> {
+    let (canonical_pda, canonical_bump) =
+        Address::try_find_program_address(seeds, &ID.into()).ok_or(ProgramError::InvalidSeeds)?;
+    if bump != [canonical_bump] {
+        return Err(ProgramError::InvalidSeeds);
+    }
+    if key != &canonical_pda {
         return Err(ProgramError::InvalidAccountData);
     }
     Ok(())

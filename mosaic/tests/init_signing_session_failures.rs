@@ -21,7 +21,102 @@ use solana_sdk::{
     instruction::{AccountMeta, Instruction},
     native_token::LAMPORTS_PER_SOL,
     program_error::ProgramError,
+    pubkey::Pubkey,
 };
+
+#[test]
+fn test_initialize_signing_session_rejects_noncanonical_pda_and_bump() {
+    let mollusk = Mollusk::new(&PROGRAM_ID, MOSAIC_BINARY_PATH);
+    let (system_program, system_account) = mollusk_svm::program::keyed_account_for_system_program();
+    let operators = Operators::new(3, system_program);
+    let (payer, payer_account) = operators.operators[0].clone();
+    let operator_keys = operators
+        .operators
+        .iter()
+        .map(|operator| operator.0)
+        .collect();
+    let (root, _, _, root_data, root_account) = prepare_root(
+        &mollusk,
+        operators,
+        operator_keys,
+        0,
+        DESTINATION_PROGRAM_ID,
+    );
+    let session_id = 1_u16.to_be_bytes();
+    let seeds = [root.as_ref(), &session_id, SIGNING_SESSION_PDA];
+    let (canonical_session, canonical_bump) = Pubkey::find_program_address(&seeds, &PROGRAM_ID);
+    let (alternate_session, alternate_bump) = (0..canonical_bump)
+        .rev()
+        .find_map(|bump| {
+            Pubkey::create_program_address(
+                &[root.as_ref(), &session_id, SIGNING_SESSION_PDA, &[bump]],
+                &PROGRAM_ID,
+            )
+            .ok()
+            .map(|address| (address, bump))
+        })
+        .expect("a valid noncanonical session PDA must exist for this program");
+
+    for (session, bump, expected_error) in [
+        (
+            alternate_session,
+            alternate_bump,
+            ProgramError::InvalidSeeds,
+        ),
+        (
+            canonical_session,
+            alternate_bump,
+            ProgramError::InvalidSeeds,
+        ),
+        (
+            alternate_session,
+            canonical_bump,
+            ProgramError::InvalidAccountData,
+        ),
+    ] {
+        let ix_data = InitializeSigningSessionIxData {
+            instruction_data: vec![],
+            instruction_accounts: vec![],
+            bump,
+        };
+        let data = [
+            vec![ProgramIx::InitializeSigningSession as u8],
+            to_vec(&ix_data).unwrap(),
+        ]
+        .concat();
+        let instruction = Instruction::new_with_bytes(
+            PROGRAM_ID,
+            &data,
+            vec![
+                AccountMeta::new(payer, true),
+                AccountMeta::new(root, false),
+                AccountMeta::new(session, false),
+                AccountMeta::new_readonly(system_program, false),
+            ],
+        );
+        mollusk.process_and_validate_instruction(
+            &instruction,
+            &[
+                (payer, payer_account.clone().into()),
+                (root, root_account.clone().into()),
+                (
+                    session,
+                    AccountSharedData::new(0, 0, &system_program).into(),
+                ),
+                (system_program, system_account.clone()),
+            ],
+            &[
+                Check::err(expected_error),
+                Check::account(&root).data(&root_data).build(),
+                Check::account(&session)
+                    .owner(&system_program)
+                    .lamports(0)
+                    .data(&[])
+                    .build(),
+            ],
+        );
+    }
+}
 
 #[test]
 fn test_initialize_signing_session_root_pda_is_not_owned_by_program_failure() {
