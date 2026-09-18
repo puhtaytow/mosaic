@@ -20,6 +20,8 @@ use mosaic::{
 use solana_sdk::{
     account::AccountSharedData,
     instruction::{AccountMeta, Instruction},
+    native_token::LAMPORTS_PER_SOL,
+    pubkey::Pubkey,
 };
 
 #[test]
@@ -122,4 +124,80 @@ fn test_initialize_signing_session() {
     assert!(parsed_signing_session_pda_data.instruction_data == cpi_instruction_data);
     assert!(parsed_signing_session_pda_data.instruction_accounts == cpi_instruction_accounts);
     assert!(parsed_signing_session_pda_data.bump == signing_pda_bump)
+}
+
+#[test]
+fn test_initialize_signing_session_after_external_sol_transfer() {
+    let mollusk = Mollusk::new(&PROGRAM_ID, MOSAIC_BINARY_PATH);
+    let (system, system_account) = mollusk_svm::program::keyed_account_for_system_program();
+    let operators = Operators::new(3, system);
+    let payer = operators.operators[0].0;
+    let keys = operators.operators.iter().map(|op| op.0).collect();
+    let (root, _, mut root_state, _, root_account) =
+        prepare_root(&mollusk, operators, keys, 0, DESTINATION_PROGRAM_ID);
+    let (session, bump) = Pubkey::find_program_address(
+        &[root.as_ref(), &1_u16.to_be_bytes(), SIGNING_SESSION_PDA],
+        &PROGRAM_ID,
+    );
+    let ix_data = InitializeSigningSessionIxData {
+        instruction_data: vec![],
+        instruction_accounts: vec![],
+        bump,
+    };
+    let data = [
+        vec![ProgramIx::InitializeSigningSession as u8],
+        to_vec(&ix_data).unwrap(),
+    ]
+    .concat();
+    let instruction = Instruction::new_with_bytes(
+        PROGRAM_ID,
+        &data,
+        vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(root, false),
+            AccountMeta::new(session, false),
+            AccountMeta::new_readonly(system, false),
+        ],
+    );
+    let expected_data = borsh::to_vec(&SigningSession {
+        session_id: 1,
+        root_pda: root,
+        phase: SigningSessionPhase::Active,
+        approvals_bitmap: 0,
+        instruction_data: vec![],
+        instruction_accounts: vec![],
+        bump,
+    })
+    .unwrap();
+    let rent = mollusk.sysvars.rent.minimum_balance(expected_data.len());
+    root_state.last_id = 1;
+    let expected_root_data = borsh::to_vec(&root_state).unwrap();
+
+    for balance in [0, mollusk.sysvars.rent.minimum_balance(0), rent, rent + 123] {
+        let target = prefund_pda(&mollusk, session, balance);
+        mollusk.process_and_validate_instruction(
+            &instruction,
+            &[
+                (
+                    payer,
+                    AccountSharedData::new(LAMPORTS_PER_SOL, 0, &system).into(),
+                ),
+                (root, root_account.clone().into()),
+                (session, target),
+                (system, system_account.clone()),
+            ],
+            &[
+                Check::success(),
+                Check::account(&payer)
+                    .lamports(LAMPORTS_PER_SOL - rent.saturating_sub(balance))
+                    .build(),
+                Check::account(&root).data(&expected_root_data).build(),
+                Check::account(&session)
+                    .owner(&PROGRAM_ID)
+                    .data(&expected_data)
+                    .lamports(balance.max(rent))
+                    .build(),
+            ],
+        );
+    }
 }

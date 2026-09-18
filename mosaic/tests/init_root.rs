@@ -15,6 +15,7 @@ use mosaic::{
 use solana_sdk::{
     account::AccountSharedData,
     instruction::{AccountMeta, Instruction},
+    native_token::LAMPORTS_PER_SOL,
     pubkey::Pubkey,
 };
 
@@ -134,4 +135,68 @@ fn test_initialize_root_huge_operators_list() {
     assert!(parsed_root_pda_data.last_id == 0);
     assert!(parsed_root_pda_data.threshold == operators.threshold);
     assert!(parsed_root_pda_data.operators == operators_pubkey);
+}
+
+#[test]
+fn test_initialize_root_after_external_sol_transfer() {
+    let mollusk = Mollusk::new(&PROGRAM_ID, MOSAIC_BINARY_PATH);
+    let (system, system_account) = mollusk_svm::program::keyed_account_for_system_program();
+    let payer = Pubkey::new_unique();
+    let (root, bump) = Pubkey::find_program_address(&[ROOT_PDA], &PROGRAM_ID);
+    let ix_data = InitializeRootIxData {
+        operators: vec![payer],
+        threshold: 1,
+        destination_program: DESTINATION_PROGRAM_ID,
+        bump,
+    };
+    let data = [
+        vec![ProgramIx::InitializeOperators as u8],
+        to_vec(&ix_data).unwrap(),
+    ]
+    .concat();
+    let instruction = Instruction::new_with_bytes(
+        PROGRAM_ID,
+        &data,
+        vec![
+            AccountMeta::new(payer, true),
+            AccountMeta::new(root, false),
+            AccountMeta::new_readonly(system, false),
+        ],
+    );
+    let expected_data = borsh::to_vec(&Root {
+        operators: vec![payer],
+        last_id: 0,
+        threshold: 1,
+        destination_program: DESTINATION_PROGRAM_ID,
+        bump,
+    })
+    .unwrap();
+    let rent = mollusk.sysvars.rent.minimum_balance(expected_data.len());
+
+    // Empty, partially funded, exactly rent exempt, and overfunded targets.
+    for balance in [0, mollusk.sysvars.rent.minimum_balance(0), rent, rent + 123] {
+        let target = prefund_pda(&mollusk, root, balance);
+        mollusk.process_and_validate_instruction(
+            &instruction,
+            &[
+                (
+                    payer,
+                    AccountSharedData::new(LAMPORTS_PER_SOL, 0, &system).into(),
+                ),
+                (root, target),
+                (system, system_account.clone()),
+            ],
+            &[
+                Check::success(),
+                Check::account(&payer)
+                    .lamports(LAMPORTS_PER_SOL - rent.saturating_sub(balance))
+                    .build(),
+                Check::account(&root)
+                    .owner(&PROGRAM_ID)
+                    .data(&expected_data)
+                    .lamports(balance.max(rent))
+                    .build(),
+            ],
+        );
+    }
 }

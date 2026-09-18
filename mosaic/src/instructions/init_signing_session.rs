@@ -1,7 +1,7 @@
 use crate::{
     ID, SIGNING_SESSION_PDA,
     errors::MosaicError,
-    instructions::{root_pda_check, signing_session_pda_check},
+    instructions::{initialize_pda_account, root_pda_check, signing_session_pda_check},
     state::{PackUnpack, root::Root, signing_session::SigningSession},
 };
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -9,7 +9,6 @@ use pinocchio::{
     AccountView, Address, ProgramResult,
     cpi::{Seed, Signer},
     error::ProgramError,
-    sysvars::{Sysvar, rent::Rent},
 };
 
 /// Initialize Signing Session
@@ -39,6 +38,9 @@ impl<'info> TryFrom<&'info [AccountView]> for InitializeSigningSessionIxAccounts
         if !payer.is_signer() {
             return Err(MosaicError::PayerMustEqualSigner.into());
         }
+        if !payer.is_writable() {
+            return Err(MosaicError::PayerAccountMustBeWritable.into());
+        }
         if !root.is_writable() {
             return Err(MosaicError::RootAccountMustBeWrittable.into());
         }
@@ -50,6 +52,12 @@ impl<'info> TryFrom<&'info [AccountView]> for InitializeSigningSessionIxAccounts
         }
         if !signing_session.is_data_empty() {
             return Err(MosaicError::SigningSessionAccountMustNotBeInitialized.into());
+        }
+        if !signing_session.owned_by(&pinocchio_system::ID) {
+            return Err(ProgramError::IllegalOwner);
+        }
+        if payer.address() == signing_session.address() {
+            return Err(ProgramError::InvalidArgument);
         }
 
         Ok(Self {
@@ -135,15 +143,12 @@ impl<'info> InitializeSigningSession<'info> {
         .pack()?;
         let (root_data, root_data_len) = root_data.pack()?;
 
-        // create signing session account
-        pinocchio_system::instructions::CreateAccount {
-            from: self.accounts.payer,
-            to: self.accounts.signing_session,
-            space: signing_session_data_len as u64,
-            lamports: Rent::get()?.try_minimum_balance(signing_session_data_len)?,
-            owner: &ID.into(),
-        }
-        .invoke_signed(&[cpi_signer])?;
+        initialize_pda_account(
+            self.accounts.payer,
+            self.accounts.signing_session,
+            signing_session_data_len,
+            &[cpi_signer],
+        )?;
 
         let mut root_account = self.accounts.root.try_borrow_mut()?;
         let mut signing_data = self.accounts.signing_session.try_borrow_mut()?;

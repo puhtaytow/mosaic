@@ -1,8 +1,12 @@
-use pinocchio::{Address, error::ProgramError};
-
-use crate::{
-    ID, {ROOT_PDA, SIGNING_SESSION_PDA},
+use pinocchio::{
+    AccountView, Address, ProgramResult,
+    cpi::Signer,
+    error::ProgramError,
+    sysvars::{Sysvar, rent::Rent},
 };
+use pinocchio_system::instructions::{Allocate, Assign, Transfer};
+
+use crate::{ID, ROOT_PDA, SIGNING_SESSION_PDA};
 
 pub mod close_session_account;
 pub mod execute;
@@ -64,6 +68,40 @@ fn check_pda(key: &Address, seeds: &[&[u8]], bump: &[u8]) -> Result<(), ProgramE
         return Err(ProgramError::InvalidAccountData);
     }
     Ok(())
+}
+
+/// Initializes an empty System-owned PDA, including one funded before creation.
+/// The caller validates the canonical PDA, authorization, System ownership,
+/// empty data, writable accounts, payer signature, and distinct payer/target.
+fn initialize_pda_account(
+    payer: &AccountView,
+    account: &AccountView,
+    space: usize,
+    signers: &[Signer<'_, '_>],
+) -> ProgramResult {
+    let required_lamports = Rent::get()?.try_minimum_balance(space)?;
+    let missing_lamports = required_lamports.saturating_sub(account.lamports());
+    if missing_lamports > 0 {
+        Transfer {
+            from: payer,
+            to: account,
+            lamports: missing_lamports,
+        }
+        .invoke()?;
+    }
+
+    // Allocate accepts an existing balance; CreateAccount would reject it.
+    Allocate {
+        account,
+        space: space as u64,
+    }
+    .invoke_signed(signers)?;
+
+    Assign {
+        account,
+        owner: &ID.into(),
+    }
+    .invoke_signed(signers)
 }
 
 /// Allows for dynamic dispatch with invoke signed; up to 20 arbitrary accounts

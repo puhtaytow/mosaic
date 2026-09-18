@@ -1,7 +1,7 @@
 use crate::{
-    ID, ROOT_PDA,
+    ROOT_PDA,
     errors::MosaicError,
-    instructions::root_pda_check,
+    instructions::{initialize_pda_account, root_pda_check},
     state::{PackUnpack, root::Root},
 };
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -9,7 +9,6 @@ use pinocchio::{
     AccountView, Address, ProgramResult,
     cpi::{Seed, Signer},
     error::ProgramError,
-    sysvars::{Sysvar, rent::Rent},
 };
 
 /// Initialize Operators
@@ -34,11 +33,20 @@ impl<'info> TryFrom<&'info [AccountView]> for InitializeRootIxAccounts<'info> {
         if !payer.is_signer() {
             return Err(MosaicError::PayerMustEqualSigner.into());
         }
+        if !payer.is_writable() {
+            return Err(MosaicError::PayerAccountMustBeWritable.into());
+        }
         if !root.is_writable() {
             return Err(MosaicError::RootAccountMustBeWrittable.into());
         }
         if !root.is_data_empty() {
             return Err(MosaicError::RootAccountMustNotBeInitialized.into());
+        }
+        if !root.owned_by(&pinocchio_system::ID) {
+            return Err(ProgramError::IllegalOwner);
+        }
+        if payer.address() == root.address() {
+            return Err(ProgramError::InvalidArgument);
         }
 
         Ok(Self { payer, root })
@@ -92,15 +100,12 @@ impl<'info> InitializeOperators<'info> {
 
         let (root_data, root_data_len) = Root::init(self.instruction_data.clone()).pack()?;
 
-        // create account
-        pinocchio_system::instructions::CreateAccount {
-            from: self.accounts.payer,
-            to: self.accounts.root,
-            space: root_data_len as u64,
-            lamports: Rent::get()?.try_minimum_balance(root_data_len)?,
-            owner: &ID.into(),
-        }
-        .invoke_signed(&[cpi_signer])?;
+        initialize_pda_account(
+            self.accounts.payer,
+            self.accounts.root,
+            root_data_len,
+            &[cpi_signer],
+        )?;
 
         // write to account
         let mut root_account = self.accounts.root.try_borrow_mut()?;

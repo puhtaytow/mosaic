@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use mollusk_svm::Mollusk;
+use mollusk_svm::{Mollusk, result::Check};
 
 use mosaic::{
     ID, ROOT_PDA, SIGNING_SESSION_PDA,
@@ -10,7 +10,12 @@ use mosaic::{
     },
 };
 
-use solana_sdk::{account::AccountSharedData, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
+use solana_sdk::{
+    account::{Account, AccountSharedData},
+    instruction::{AccountMeta, Instruction},
+    native_token::LAMPORTS_PER_SOL,
+    pubkey::Pubkey,
+};
 
 pub const PROGRAM_ID: Pubkey = Pubkey::new_from_array(ID);
 pub const DESTINATION_PROGRAM_ID: Pubkey =
@@ -238,4 +243,43 @@ pub fn prepare_storage_account(
     storage_data[..header_size].copy_from_slice(&storage_header);
     storage_pda_account.set_data_from_slice(&storage_data);
     (storage_pda, storage_pda_account)
+}
+
+/// Funds a PDA with a System Program transfer from an unrelated signer.
+pub fn prefund_pda(mollusk: &Mollusk, target: Pubkey, amount: u64) -> Account {
+    if amount == 0 {
+        return Account::default();
+    }
+    let (system, system_account) = mollusk_svm::program::keyed_account_for_system_program();
+    let attacker = Pubkey::new_unique();
+    // SystemInstruction::Transfer: the recipient does not sign.
+    let data = [
+        2_u32.to_le_bytes().as_slice(),
+        amount.to_le_bytes().as_slice(),
+    ]
+    .concat();
+    let transfer = Instruction::new_with_bytes(
+        system,
+        &data,
+        vec![
+            AccountMeta::new(attacker, true),
+            AccountMeta::new(target, false),
+        ],
+    );
+    let result = mollusk.process_and_validate_instruction(
+        &transfer,
+        &[
+            (
+                attacker,
+                AccountSharedData::new(LAMPORTS_PER_SOL, 0, &system).into(),
+            ),
+            (target, Account::default()),
+            (system, system_account),
+        ],
+        &[
+            Check::success(),
+            Check::account(&target).lamports(amount).build(),
+        ],
+    );
+    result.get_account(&target).unwrap().clone()
 }
